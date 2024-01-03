@@ -184,8 +184,12 @@ io.on("connection",(socket)=>{
 
 // const serverUrl = process.env.SERVER_URL;
 
-server.listen(process.env.SERVER_URL, () => {
-    console.log('SERVER IS RUNNING');
+// server.listen(process.env.SERVER_URL, () => {
+//     console.log('SERVER IS RUNNING');
+// })
+
+server.listen(() => {
+  console.log('SERVER IS RUNNING');
 })
 
 
