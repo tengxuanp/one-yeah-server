@@ -188,9 +188,9 @@ io.on("connection",(socket)=>{
 //     console.log('SERVER IS RUNNING');
 // })
 
-server.listen(() => {
+server.listen(process.env.PORT || 3000, () => {
   console.log('SERVER IS RUNNING');
-})
+});
 
 
 function checkHost(socket) {
