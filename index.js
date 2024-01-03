@@ -4,6 +4,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 require('dotenv').config(); 
+const PORT = process.env.PORT || 3000
 
 app.use(cors());
 
@@ -15,6 +16,10 @@ const io = new Server(server, {
         methods: ["GET","POST"],
     },
 })
+
+app.get('/', (req, res) => {
+  res.send(`<h1>Socket IO runs on Port: ${PORT}</h1>`);
+});
 
 io.on("connection",(socket)=>{
     socket.currentUser = {}
