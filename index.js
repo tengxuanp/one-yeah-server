@@ -4,7 +4,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 require('dotenv').config(); 
-const PORT = process.env.PORT || 3000
+const PORT = process.env.PORT || 3001
 
 app.use(cors());
 
@@ -193,7 +193,7 @@ io.on("connection",(socket)=>{
 //     console.log('SERVER IS RUNNING');
 // })
 
-server.listen(process.env.PORT || 3000, () => {
+server.listen(PORT, () => {
   console.log('SERVER IS RUNNING');
 });
 
