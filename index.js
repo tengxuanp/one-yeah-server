@@ -17,24 +17,26 @@ const io = new Server(server, {
     },
 })
 
+const users = {};
+
 app.get('/', (req, res) => {
   res.send(`<h1>Socket IO runs on Port: ${PORT}</h1>`);
 });
 
 io.on("connection",(socket)=>{
-    if (!socket.currentUser) {
-        socket.currentUser = {};
+    if (!users[socket.id]) {
+      users[socket.id] = {};
     }
 
     console.log(`User Connected: ${socket.id}`)
     // Set Username
     socket.on('set_username', (data) => {
-        socket.currentUser.username = data.username
+        users[socket.id].username = data.username
         console.log('Current User Details 1:', socket.currentUser);
         console.log(`Player ${socket.currentUser.username} created.`)
         // Check if roomID is available before logging to the client
-        if (socket.currentUser.roomID) {
-          logToClient(socket.currentUser.roomID, `Player ${ socket.currentUser.username} created.`)
+        if (users[socket.id].roomID) {
+          logToClient(users[socket.id].roomID, `Player ${users[socket.id].username} created.`);
         }
         socket.emit("receive_username", data)
         
@@ -42,12 +44,12 @@ io.on("connection",(socket)=>{
 
     // Create or Join room
     socket.on("joinRoom", (roomID) => {
-      console.log('Current User Details 2:', socket.currentUser);
-      let username = socket.currentUser.username
+      console.log('Current User Details 2:', users[socket.id]);
+      let username = users[socket.id].username;
 
         if (roomID) {
           socket.join(roomID);
-          socket.currentUser.roomID = roomID;
+          users[socket.id].roomID = roomID;
           socket.emit('roomID', roomID); // Send the room ID back to the user
           console.log(`Player ${username} joined room ${roomID}`)
           logToClient(roomID, `Player ${username} joined room ${roomID}.`)
@@ -64,7 +66,7 @@ io.on("connection",(socket)=>{
         } else {
           const newRoomID = generateUniqueCode(); // Generate a unique room ID
           socket.join(newRoomID);
-          socket.currentUser.roomID = newRoomID;
+          users[socket.id].roomID = newRoomID;
           socket.emit('roomID', newRoomID); // Send the room ID back to the user
           console.log(`Player ${username} created room ${newRoomID}.`);
           logToClient(newRoomID, `Player ${username} created room ${newRoomID}.`)
@@ -280,7 +282,7 @@ const usernamesToSocketIDs = new Map();
 
 // Function to get usernames in a specific room
 function getUsernamesInRoom(roomID) {
-  const usernames = usernamesInRooms.get(roomID) || [];
+  const usernames = Object.values(users).filter(user => user.roomID === roomID).map(user => user.username);
   console.log(`Usernames in room ${roomID}:`, usernames);
   return usernames;
 }
@@ -290,9 +292,11 @@ function getSocketIDByUsername(username) {
 }
 
 function setUserInRoom(roomID, username, socketID) {
-  const usernames = usernamesInRooms.get(roomID) || [];
-  usernamesInRooms.set(roomID, [...usernames, username]);
-  usernamesToSocketIDs.set(username, socketID);
+  const user = Object.values(users).find(user => user.username === username);
+  if (user) {
+    user.roomID = roomID;
+    user.socketID = socketID;
+  }
 }
 
 
