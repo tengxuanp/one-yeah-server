@@ -12,31 +12,29 @@ const server = http.createServer(app)
 
 const io = new Server(server, {
     cors: {
-        origin: process.env.CLIENT_URL,
+        origin: [process.env.CLIENT_URL,process.env.DEPLOYMENT_URL],
         methods: ["GET","POST"],
     },
 })
-
-const users = {};
 
 app.get('/', (req, res) => {
   res.send(`<h1>Socket IO runs on Port: ${PORT}</h1>`);
 });
 
 io.on("connection",(socket)=>{
-    if (!users[socket.id]) {
-      users[socket.id] = {};
+    if (!socket.currentUser) {
+        socket.currentUser = {};
     }
 
     console.log(`User Connected: ${socket.id}`)
     // Set Username
     socket.on('set_username', (data) => {
-        users[socket.id].username = data.username
-        console.log('Current User Details 1:', users[socket.id]);
-        console.log(`Player ${users[socket.id].username} created.`);
+        socket.currentUser.username = data.username
+        console.log('Current User Details 1:', socket.currentUser);
+        console.log(`Player ${socket.currentUser.username} created.`)
         // Check if roomID is available before logging to the client
-        if (users[socket.id].roomID) {
-          logToClient(users[socket.id].roomID, `Player ${users[socket.id].username} created.`);
+        if (socket.currentUser.roomID) {
+          logToClient(socket.currentUser.roomID, `Player ${ socket.currentUser.username} created.`)
         }
         socket.emit("receive_username", data)
         
@@ -44,12 +42,12 @@ io.on("connection",(socket)=>{
 
     // Create or Join room
     socket.on("joinRoom", (roomID) => {
-      console.log('Current User Details 2:', users[socket.id]);
-      let username = users[socket.id].username;
+      console.log('Current User Details 2:', socket.currentUser);
+      let username = socket.currentUser.username
 
         if (roomID) {
           socket.join(roomID);
-          users[socket.id].roomID = roomID;
+          socket.currentUser.roomID = roomID;
           socket.emit('roomID', roomID); // Send the room ID back to the user
           console.log(`Player ${username} joined room ${roomID}`)
           logToClient(roomID, `Player ${username} joined room ${roomID}.`)
@@ -66,7 +64,7 @@ io.on("connection",(socket)=>{
         } else {
           const newRoomID = generateUniqueCode(); // Generate a unique room ID
           socket.join(newRoomID);
-          users[socket.id].roomID = newRoomID;
+          socket.currentUser.roomID = newRoomID;
           socket.emit('roomID', newRoomID); // Send the room ID back to the user
           console.log(`Player ${username} created room ${newRoomID}.`);
           logToClient(newRoomID, `Player ${username} created room ${newRoomID}.`)
@@ -282,7 +280,7 @@ const usernamesToSocketIDs = new Map();
 
 // Function to get usernames in a specific room
 function getUsernamesInRoom(roomID) {
-  const usernames = Object.values(users).filter(user => user.roomID === roomID).map(user => user.username);
+  const usernames = usernamesInRooms.get(roomID) || [];
   console.log(`Usernames in room ${roomID}:`, usernames);
   return usernames;
 }
@@ -292,11 +290,9 @@ function getSocketIDByUsername(username) {
 }
 
 function setUserInRoom(roomID, username, socketID) {
-  const user = Object.values(users).find(user => user.username === username);
-  if (user) {
-    user.roomID = roomID;
-    user.socketID = socketID;
-  }
+  const usernames = usernamesInRooms.get(roomID) || [];
+  usernamesInRooms.set(roomID, [...usernames, username]);
+  usernamesToSocketIDs.set(username, socketID);
 }
 
 
@@ -304,4 +300,3 @@ function logToClient(roomID, message){
   console.log('server sends log')
   io.to(roomID).emit('log_message', { message });
 }
-
