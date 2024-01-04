@@ -22,7 +22,9 @@ app.get('/', (req, res) => {
 });
 
 io.on("connection",(socket)=>{
-    socket.currentUser = {}
+    if (!socket.currentUser) {
+        socket.currentUser = {};
+    }
 
     console.log(`User Connected: ${socket.id}`)
     // Set Username
