@@ -32,8 +32,8 @@ io.on("connection",(socket)=>{
     // Set Username
     socket.on('set_username', (data) => {
         users[socket.id].username = data.username
-        console.log('Current User Details 1:', socket.currentUser);
-        console.log(`Player ${socket.currentUser.username} created.`)
+        console.log('Current User Details 1:', users[socket.id]);
+        console.log(`Player ${users[socket.id].username} created.`);
         // Check if roomID is available before logging to the client
         if (users[socket.id].roomID) {
           logToClient(users[socket.id].roomID, `Player ${users[socket.id].username} created.`);
