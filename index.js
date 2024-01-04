@@ -30,6 +30,7 @@ io.on("connection",(socket)=>{
     // Set Username
     socket.on('set_username', (data) => {
         socket.currentUser.username = data.username
+        console.log('Socket1:',`${socket}`)
         console.log('Current User Details 1:', socket.currentUser);
         console.log(`Player ${socket.currentUser.username} created.`)
         // Check if roomID is available before logging to the client
@@ -42,6 +43,7 @@ io.on("connection",(socket)=>{
 
     // Create or Join room
     socket.on("joinRoom", (roomID) => {
+      console.log('Socket2:',`${socket}`)
       console.log('Current User Details 2:', socket.currentUser);
       let username = socket.currentUser.username
 
