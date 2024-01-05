@@ -27,9 +27,15 @@ app.get('/', (req, res) => {
 });
 
 io.on("connection",(socket)=>{
-    if (!socket.currentUser) {
-        socket.currentUser = {};
-    }
+
+    const uniqueIdentifier = generateUniqueIdentifier();
+    // socket.emit("assign_unique_identifier", { uniqueIdentifier });
+
+    // socket.currentUser = {};
+    socket.currentUser = {
+      // Include the unique identifier in the user's data
+      uniqueIdentifier,
+    };
 
     console.log(`User Connected: ${socket.id}`)
     // Set Username
@@ -215,6 +221,12 @@ function checkHost(socket) {
   const isHost = socket.currentUser && socket.currentUser.host === true;
   socket.emit('checkHost', { host: isHost });
   return isHost;
+}
+
+function generateUniqueIdentifier() {
+  const timestamp = new Date().getTime().toString(36);
+  const randomPart = Math.random().toString(36).slice(2, 7);
+  return `${timestamp}-${randomPart}`;
 }
 
 function generateUniqueCode() {
