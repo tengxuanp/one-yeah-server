@@ -31,17 +31,14 @@ io.on("connection",(socket)=>{
     const uniqueIdentifier = generateUniqueIdentifier();
     // socket.emit("assign_unique_identifier", { uniqueIdentifier });
 
-    // socket.currentUser = {};
-    socket.currentUser = {
-      // Include the unique identifier in the user's data
-      uniqueIdentifier,
-    };
+    socket.currentUser = {};
+    socket.currentUser.id = uniqueIdentifier
 
     console.log(`User Connected: ${socket.id}`)
     // Set Username
     socket.on('set_username', (data) => {
         socket.currentUser.username = data.username
-        console.log('Socket1:',`${socket.id}`)
+        console.log('Socket1:',`${socket.currentUser.id}`)
         console.log('Current User Details 1:', socket.currentUser);
         console.log(`Player ${socket.currentUser.username} created.`)
         // Check if roomID is available before logging to the client
@@ -54,7 +51,7 @@ io.on("connection",(socket)=>{
 
     // Create or Join room
     socket.on("joinRoom", (roomID) => {
-      console.log('Socket2:',`${socket.id}`)
+      console.log('Socket2:',`${socket.currentUser.id}`)
       console.log('Current User Details 2:', socket.currentUser);
       let username = socket.currentUser.username
 
@@ -67,7 +64,7 @@ io.on("connection",(socket)=>{
 
           const existingUsernames = getUsernamesInRoom(roomID);
           // setUsernamesInRoom(roomID,[...existingUsernames, username])
-          setUserInRoom(roomID, username, socket.id);
+          setUserInRoom(roomID, username, socket.currentUser.id);
 
           socket.currentUser.host = false;
 
@@ -85,7 +82,7 @@ io.on("connection",(socket)=>{
 
           // setUsernamesInRoom(newRoomID,[username])
           // setUsernamesToSocketIDs(socket.id,socket.currentUser.username)
-          setUserInRoom(newRoomID, username, socket.id);
+          setUserInRoom(newRoomID, username, socket.currentUser.id);
 
         }
       });
