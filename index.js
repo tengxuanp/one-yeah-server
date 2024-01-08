@@ -12,10 +12,7 @@ const server = http.createServer(app)
 
 const io = new Server(server, {
     cors: {
-        origin: [
-          process.env.CLIENT_URL,
-          process.env.CLIENT_URL + '/*',
-          process.env.DEPLOYMENT_URL],
+        origin: process.env.CLIENT_URL,
         methods: ["GET","POST"],
     },
 })
@@ -30,43 +27,36 @@ io.on("connection",(socket)=>{
     }
 
     console.log(`User Connected: ${socket.id}`)
-
     // Set Username
     socket.on('set_username', (data) => {
-        const username = data.username
-        // console.log(`Player ${socket.currentUser.username} created.`)
+        socket.currentUser.username = data.username
+        console.log('Current User Details 1:', socket.currentUser);
+        console.log(`Player ${socket.currentUser.username} created.`)
         // Check if roomID is available before logging to the client
-
-
-        // if (socket.currentUser.roomID) {
-        //   logToClient(socket.currentUser.roomID, `Player ${ socket.currentUser.username} created.`)
-        // }
-        socket.emit("receive_userdata", {username,uniqueIdentifier})
+        if (socket.currentUser.roomID) {
+          logToClient(socket.currentUser.roomID, `Player ${ socket.currentUser.username} created.`)
+        }
+        socket.emit("receive_username", data)
         
     })
 
     // Create or Join room
-    socket.on("joinRoom", ({roomID,userid,username}) => {
-
-
-      // console.log('Current User Details 2:', socket.currentUser);
+    socket.on("joinRoom", (roomID) => {
+      console.log('Current User Details 2:', socket.currentUser);
+      let username = socket.currentUser.username
 
         if (roomID) {
           socket.join(roomID);
-          // localStorage.setItem('roomID',roomID);
-          const isHost = false
-
-          socket.emit('roomID', {roomID,isHost}); // Send the room ID back to the user
+          socket.currentUser.roomID = roomID;
+          socket.emit('roomID', roomID); // Send the room ID back to the user
           console.log(`Player ${username} joined room ${roomID}`)
           logToClient(roomID, `Player ${username} joined room ${roomID}.`)
 
+          const existingUsernames = getUsernamesInRoom(roomID);
           // setUsernamesInRoom(roomID,[...existingUsernames, username])
+          setUserInRoom(roomID, username, socket.id);
 
-          setUserInRoom(roomID, username, userid);
-
-          // localStorage.setItem('isHost',false);
-          
-          // socket.emit('set_roomIDnHost',{roomID,isHost})
+          socket.currentUser.host = false;
 
           // Emit the updated userlist to all clients in the room
           io.to(roomID).emit('usersRoomReceive', getUsernamesInRoom(roomID));
@@ -74,24 +64,24 @@ io.on("connection",(socket)=>{
         } else {
           const newRoomID = generateUniqueCode(); // Generate a unique room ID
           socket.join(newRoomID);
-          // localStorage.setItem('roomID',newRoomID);
-          const isHost = true
-          const roomID = newRoomID
-          // socket.emit('set_roomIDnHost',{newRoomID,isHost})
-    
-
-          socket.emit('roomID', {roomID,isHost}); // Send the room ID back to the user
+          socket.currentUser.roomID = newRoomID;
+          socket.emit('roomID', newRoomID); // Send the room ID back to the user
           console.log(`Player ${username} created room ${newRoomID}.`);
           logToClient(newRoomID, `Player ${username} created room ${newRoomID}.`)
-        
-          setUserInRoom(newRoomID, username, userid);
+          socket.currentUser.host = true;
+
+          // setUsernamesInRoom(newRoomID,[username])
+          // setUsernamesToSocketIDs(socket.id,socket.currentUser.username)
+          setUserInRoom(newRoomID, username, socket.id);
 
         }
       });
-
       
     socket.on("usersRoomRequest", (data) => { 
-      let usernames = getUsernamesInRoom(data)    
+      let usernames = getUsernamesInRoom(data)
+
+      let socketIDs = usernames.map(username => getSocketIDByUsername(username));
+    
 
       if(data){
         socket.emit('usersRoomReceive',usernames)
@@ -101,10 +91,8 @@ io.on("connection",(socket)=>{
       }
     })
 
-    socket.on("initiate_game", ({selectedGame,roomID})=>{
-    //   io.to(socket.currentUser.roomID).emit("game_initiated",gameid);
-    // })
-      io.to(roomID).emit("game_initiated",selectedGame);
+    socket.on("initiate_game", (gameid)=>{
+      io.to(socket.currentUser.roomID).emit("game_initiated",gameid);
     })
 
     socket.on("request_start_game_session", ({roomid, gameid})=>{
@@ -114,8 +102,6 @@ io.on("connection",(socket)=>{
 
     socket.on("game_session", async ({ roomid, gameid }) => {
       console.log('server4')
-
-      socket.currentUser = {}
 
       socket.currentUser.gameState = {
         gameStarted: false,
@@ -127,11 +113,6 @@ io.on("connection",(socket)=>{
       const {gameState} = socket.currentUser
 
       io.to(roomid).emit("game_started",gameState);
-
-      // const room = io.sockets.adapter.rooms.get(roomid);
-      // const socketIdsInRoom = Array.from(room);
-      // console.log(socketIdsInRoom)
-
       //GAME 1
       if(gameid == 1){ 
         
@@ -144,11 +125,11 @@ io.on("connection",(socket)=>{
         generateQuestion({currentQuestion,roomid})
 
 
-        socket.on('handleAnswer', ({ userid, answer, roomid }) => {
+        socket.on('handleAnswer', ({ socketid, answer, roomid }) => {
           let username;
         
           gameState.users.forEach(user => {
-            if (getSocketIDByUsername(user) === userid) {
+            if (getSocketIDByUsername(user) === socketid) {
               username = user;
             }
           });
@@ -207,6 +188,8 @@ io.on("connection",(socket)=>{
       }
       
     });
+
+    
   
 })
 
@@ -262,12 +245,12 @@ function decideTurn({gameState}) {
 
   gameState.currentPlayerIndex = Math.floor(Math.random() * gameState.users.length)
 
-  // console.log(gameState)
+  let ChosenPlayer = gameState.users[gameState.currentPlayerIndex];
+  // let currentPlayerSocketID = getSocketIDByUsername(ChosenPlayer)
 
+  // io.to(currentPlayerSocketID).emit("current_player_turn");
   gameState.users.forEach((user, index) => {
     const currentPlayerSocketID = getSocketIDByUsername(user);
-
-
     const isCurrentPlayer = index === gameState.currentPlayerIndex;
 
     io.to(currentPlayerSocketID).emit("current_player_turn", isCurrentPlayer);
@@ -297,7 +280,9 @@ const usernamesToSocketIDs = new Map();
 
 // Function to get usernames in a specific room
 function getUsernamesInRoom(roomID) {
-  return usernamesInRooms.get(roomID) || [];
+  const usernames = usernamesInRooms.get(roomID) || [];
+  console.log(`Usernames in room ${roomID}:`, usernames);
+  return usernames;
 }
 
 function getSocketIDByUsername(username) {
@@ -315,3 +300,4 @@ function logToClient(roomID, message){
   console.log('server sends log')
   io.to(roomID).emit('log_message', { message });
 }
+
