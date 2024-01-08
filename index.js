@@ -18,8 +18,6 @@ const io = new Server(server, {
           process.env.DEPLOYMENT_URL],
         methods: ["GET","POST"],
     },
-    reconnection: false, // Disable reconnection
-    reconnectionAttempts: 0, // Set the number of reconnection attempts to 0
 })
 
 app.get('/', (req, res) => {
