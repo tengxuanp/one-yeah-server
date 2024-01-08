@@ -297,9 +297,7 @@ const usernamesToSocketIDs = new Map();
 
 // Function to get usernames in a specific room
 function getUsernamesInRoom(roomID) {
-  const usernames = usernamesInRooms.get(roomID) || [];
-  console.log(`Usernames in room ${roomID}:`, usernames);
-  return usernames;
+  return usernamesInRooms.get(roomID) || [];
 }
 
 function getSocketIDByUsername(username) {
